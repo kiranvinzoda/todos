@@ -40,7 +40,7 @@ async def root():
     return {"message": "Hello World"}
 
 @app.post("/add_todo/", response_model=schemas.Show_Todo)
-def create_todo(todo: schemas.Crate_Todo, db: Session = Depends(get_db)):
+def create_todo(todo: schemas.Create_Todo, db: Session = Depends(get_db)):
     return crud.create_todo(db=db, todo=todo)
 
 
@@ -60,13 +60,14 @@ def read_todo(todo_id: int, db: Session = Depends(get_db)):
 
 
 @app.put("/update_todo/{todo_id}", response_model=schemas.Show_Todo)
-def put_todo(todo_id: int, todo: schemas.Crate_Todo, db: Session = Depends(get_db)):
+def put_todo(todo_id: int, todo: schemas.Create_Todo, db: Session = Depends(get_db)):
     db_todo = crud.get_todo(db, todo_id=todo_id)
-
+    print(db_todo)
     if db_todo is None:
         raise HTTPException(status_code=404, detail="User not found")
-    db_todo = crud.update_todo(db, todo_id=todo_id, todo = todo)    
-    return db_todo
+    update_tod = crud.update_todo(db, todo_id=todo_id, todo = todo)    
+    print(update_tod)
+    return update_tod
 
 
 @app.delete("/delete_todo/{todo_id}")
@@ -76,8 +77,8 @@ def read_todo(todo_id: int, db: Session = Depends(get_db)):
     if db_todo is None:
         raise HTTPException(status_code=404, detail="Todo not found")
     db_todo = crud.delete_todo(db, todo_id=todo_id)
-    if db_todo is None:
-        raise HTTPException(status_code=404, detail="User not found")
+    if db_todo:
+        raise HTTPException(status_code=404, detail="Todo deleted succesfully")
    
 
 

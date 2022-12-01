@@ -23,7 +23,7 @@ class Show_Todo(BaseModel):
 
 
 
-class Crate_Todo(BaseModel):
+class Create_Todo(BaseModel):
     
     title : str
     desc : str
