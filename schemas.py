@@ -1,9 +1,8 @@
 from pydantic import BaseModel
 
 
-
 class Show_User(BaseModel):
-    id: int
+    id: str
     email : str
     password : str
     is_active : bool
@@ -13,7 +12,7 @@ class Show_User(BaseModel):
 
 
 class Show_Todo(BaseModel):
-    id: int
+    id: str
     title : str
     desc : str
     is_active : bool
@@ -33,6 +32,28 @@ class Create_Todo(BaseModel):
         orm_mode = True
 
 
+class Create_Usr(BaseModel):
+    
+    name : str
+    email : str
+    password : str
 
 
+    class Config:
+        orm_mode = True
 
+
+class Show_User(BaseModel):
+    id: str
+    name : str
+    email : str
+    password : str
+    is_active : bool
+
+    class Config:
+        orm_mode = True
+
+
+class AuthDetails(BaseModel):
+    email: str
+    password: str

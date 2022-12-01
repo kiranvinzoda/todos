@@ -1,5 +1,5 @@
 from typing import List
-from fastapi import Depends, FastAPI, HTTPException, Request, Response
+from fastapi import Depends, FastAPI, HTTPException, Request, Response, Header
 from sqlalchemy.orm import Session
 from database import SessionLocal, engine
 from models import User, Todo
@@ -7,10 +7,12 @@ from fastapi.middleware.cors import CORSMiddleware
 import schemas
 import models
 import crud
+from auth import AuthHandler
+
 
 models.Base.metadata.create_all(bind=engine)
 app = FastAPI()
-
+auth_handler = AuthHandler()
 
 origins = [
     "http://localhost.tiangolo.com",
@@ -35,63 +37,115 @@ def get_db():
     finally:
         db.close()
 
-@app.get("/")
-async def root():
-    return {"message": "Hello World"}
-
-@app.post("/add_todo/", response_model=schemas.Show_Todo)
-def create_todo(todo: schemas.Create_Todo, db: Session = Depends(get_db)):
-    return crud.create_todo(db=db, todo=todo)
 
 
+@app.post("/add_todo/", tags=["todo"], response_model=schemas.Show_Todo)
+def create_todo(todo: schemas.Create_Todo, db: Session = Depends(get_db), token: str = Header(None)):
+    check = crud.user_varification(db, token= token )
+    if check:
+        return crud.create_todo(db=db, todo=todo)
+    else:
+        raise HTTPException(status_code=404, detail="Token not valid")   
 
-@app.get("/show_todos/", response_model=List[schemas.Show_Todo])
+
+@app.get("/show_todos/", tags=["todo"], response_model=List[schemas.Show_Todo])
+def read_users(db: Session = Depends(get_db), token: str = Header(None)):
+    check = crud.user_varification(db, token= token )
+    if check:
+        return crud.get_all_todos(db)
+    else:
+        raise HTTPException(status_code=404, detail="Token not valid")  
+
+
+@app.get("/get_todo/{todo_id}", tags=["todo"], response_model=schemas.Show_Todo)
+def read_todo(todo_id: str, db: Session = Depends(get_db), token: str = Header(None)):
+    check = crud.user_varification(db, token= token )
+    if check:
+        db_todo = crud.get_todo(db, todo_id=todo_id)
+        if db_todo is None:
+            raise HTTPException(status_code=404, detail="Todo not found")
+        return db_todo
+    else:
+        raise HTTPException(status_code=404, detail="Token not valid") 
+        
+    
+
+@app.put("/update_todo/{todo_id}", tags=["todo"], response_model=schemas.Show_Todo)
+def put_todo(todo_id: str, todo: schemas.Create_Todo, db: Session = Depends(get_db), token: str = Header(None)):
+    check = crud.user_varification(db, token= token )
+    if check:
+        db_todo = crud.get_todo(db, todo_id=todo_id)
+        if db_todo is None:
+            raise HTTPException(status_code=404, detail="User not found")
+        update_tod = crud.update_todo(db, todo_id=todo_id, todo = todo)    
+        return update_tod      
+    else:
+        raise HTTPException(status_code=404, detail="Token not valid") 
+
+
+@app.delete("/delete_todo/{todo_id}", tags=["todo"])
+def read_todo(todo_id: str, db: Session = Depends(get_db), token : str = Header(None)):
+    check = crud.user_varification(db, token= token )
+    if check:
+        db_todo = crud.get_todo(db, todo_id=todo_id)
+        if db_todo is None:
+            raise HTTPException(status_code=404, detail="Todo not found")
+        db_todo = crud.delete_todo(db, todo_id=todo_id)
+        if db_todo:
+            raise HTTPException(status_code=404, detail="Todo deleted succesfully")
+    else:
+        raise HTTPException(status_code=404, detail="Token not valid")  
+
+
+
+@app.get("/show_users/", tags=["user"], response_model=List[schemas.Show_User])
 def read_users(db: Session = Depends(get_db)):
-    todos = crud.get_all_todos(db)
-    return todos
+    users = crud.get_all_users(db)
+    return users
 
 
-@app.get("/get_todo/{todo_id}", response_model=schemas.Show_Todo)
-def read_todo(todo_id: int, db: Session = Depends(get_db)):
-    db_todo = crud.get_todo(db, todo_id=todo_id)
-    if db_todo is None:
+@app.get("/get_user/{todo_id}", tags=["user"], response_model=schemas.Show_User)
+def read_todo(user_id: str, db: Session = Depends(get_db)):
+    db_user = crud.get_user(db, user_id=user_id)
+    if db_user is None:
         raise HTTPException(status_code=404, detail="Todo not found")
-    return db_todo
+    return db_user
 
 
-@app.put("/update_todo/{todo_id}", response_model=schemas.Show_Todo)
-def put_todo(todo_id: int, todo: schemas.Create_Todo, db: Session = Depends(get_db)):
-    db_todo = crud.get_todo(db, todo_id=todo_id)
-    print(db_todo)
-    if db_todo is None:
-        raise HTTPException(status_code=404, detail="User not found")
-    update_tod = crud.update_todo(db, todo_id=todo_id, todo = todo)    
-    print(update_tod)
-    return update_tod
+#jwt tokan
+
+@app.post('/user_register', tags=["user"], status_code=201)
+def register(user: schemas.Create_Usr , db: Session = Depends(get_db)):
+    user_record = crud.get_user_by_email(db=db, user_email=user.email)
+    if  user_record is not None :
+        raise HTTPException(status_code=400, detail='email is taken')
+    hashed_password = auth_handler.get_password_hash(user.password)
+    return crud.create_user(db=db, user=user, password = hashed_password)
 
 
-@app.delete("/delete_todo/{todo_id}")
-def read_todo(todo_id: int, db: Session = Depends(get_db)):
-    db_todo = crud.get_todo(db, todo_id=todo_id)
-    print(db_todo)
-    if db_todo is None:
-        raise HTTPException(status_code=404, detail="Todo not found")
-    db_todo = crud.delete_todo(db, todo_id=todo_id)
-    if db_todo:
-        raise HTTPException(status_code=404, detail="Todo deleted succesfully")
-   
+
+@app.post('/user_login', tags=["user"])
+def login(auth_details: schemas.AuthDetails, db: Session = Depends(get_db)):
+    user = None
+    user_record = crud.get_user_by_email(db=db, user_email=auth_details.email)
+    if user_record is None:
+        raise HTTPException(status_code=401, detail='invalid email')
+
+    print(user_record.email)
+         
+    if (user_record is None) or (not auth_handler.verify_password(auth_details.password, user_record.password)):
+        raise HTTPException(status_code=401, detail='Invalid username and/or password')
+    token = auth_handler.encode_token(user_record.email)
+    return { 'token': token }
 
 
-# @app.get("/users/", response_model=List[schemas.User])
-# def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-#     users = crud.get_users(db, skip=skip, limit=limit)
-#     return users
+
+# @app.get('/protected2')
+# def protected(token: str = Header(None)):
+#     print(token)
+#     result = auth_handler.decode_token(token)
+#     print(result)
+#     return { 'name': "ok" }
 
 
-# @app.get("/users/{user_id}", response_model=schemas.User)
-# def read_user(user_id: int, db: Session = Depends(get_db)):
-#     db_user = crud.get_user(db, user_id=user_id)
-#     if db_user is None:
-#         raise HTTPException(status_code=404, detail="User not found")
-#     return db_user
 

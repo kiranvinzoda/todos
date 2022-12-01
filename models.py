@@ -8,9 +8,10 @@ from database import Base
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True, index=True)
-    email = Column(String(50), unique=True , index=True)
-    password = Column(String(50))
+    id = Column(String(36), primary_key=True)
+    name = Column(String(50))
+    email = Column(String(50))
+    password = Column(String(255))
     is_active = Column(Boolean, default=True)
  
 
@@ -21,8 +22,8 @@ class User(Base):
 class Todo(Base):
     __tablename__ = "todo"
 
-    id = Column(Integer, primary_key=True, index=True)
-    title = Column(String(50), unique=True, index=True)
+    id = Column(String(36), primary_key=True)
+    title = Column(String(50))
     desc = Column(String(50))
     # owner = Column(Integer, ForeignKey("users.id"), default=1)
     is_active = Column(Boolean, default=True)
