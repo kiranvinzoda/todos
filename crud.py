@@ -14,30 +14,40 @@ def generate_id():
 
 
 def user_varification(db: Session, token : str):
-    result_email = auth_handler.decode_token(token)
-    user_record = db.query(models.User).filter(models.User.email == result_email).first()
+    result_id = auth_handler.decode_token(token)
+    user_record = db.query(models.User).filter(models.User.id == result_id).first()
     if user_record is not None:
         return True
     else:
         return False
 
+def get_user_by_token(db: Session, token : str):
+    result_id = auth_handler.decode_token(token)
+    user_record = db.query(models.User).filter(models.User.id == result_id).first()
+    return user_record
+         
 
-def get_todo(db: Session, todo_id: str):
-    return db.query(models.Todo).filter(models.Todo.id == todo_id , models.Todo.is_active == True).first()
+
+def get_todo(db: Session, todo_id: str, token : str):
+    user = get_user_by_token(db, token)
+    return db.query(models.Todo).filter(models.Todo.id == todo_id , models.Todo.is_active == True, models.Todo.owner == user.id).first()
 
 
 def get_todo_by_id(db: Session, id: str):
     return db.query(models.Todo).filter(models.Todo.id == id, models.Todo.is_active == True).first()
 
 
-def get_all_todos(db: Session):
-    return db.query(models.Todo).filter(models.Todo.is_active == True).all()
+def get_all_todos(db: Session, token : str):
+    user = get_user_by_token(db, token)
+    return db.query(models.Todo).filter(models.Todo.is_active == True, models.Todo.owner == user.id).all()
 
 
-def create_todo(db: Session, todo: schemas.Create_Todo):
+def create_todo(db: Session, todo: schemas.Create_Todo, token= str):
     
     todo_id = generate_id()
-    db_todo = models.Todo(id = todo_id,title=todo.title, desc=todo.desc)
+    user = get_user_by_token(db , token = token)
+    print(user.id)
+    db_todo = models.Todo(id = todo_id, title=todo.title, desc=todo.desc, owner=user.id)
     db.add(db_todo)
     db.commit()
     db.refresh(db_todo)

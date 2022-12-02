@@ -13,9 +13,8 @@ class User(Base):
     email = Column(String(50))
     password = Column(String(255))
     is_active = Column(Boolean, default=True)
- 
 
-    # todo = relationship("Todo", backref="owner")
+    # todo = relationship("Todo", back_populates="owner")
 
 
 
@@ -25,9 +24,12 @@ class Todo(Base):
     id = Column(String(36), primary_key=True)
     title = Column(String(50))
     desc = Column(String(50))
-    # owner = Column(Integer, ForeignKey("users.id"), default=1)
+    owner = Column(String(36), ForeignKey('users.id'))
     is_active = Column(Boolean, default=True)
 
-    # owner = relationship("User", backref="todo")
+    user = relationship("User", backref="todo")
+
+
+
 
 
