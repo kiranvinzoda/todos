@@ -38,7 +38,6 @@ def get_db():
         db.close()
 
 
-
 @app.post("/add_todo/", tags=["todo"], response_model=schemas.Show_Todo)
 def create_todo(todo: schemas.Create_Todo, db: Session = Depends(get_db), token: str = Header(None)):
     check = crud.user_varification(db, token= token )
@@ -49,10 +48,10 @@ def create_todo(todo: schemas.Create_Todo, db: Session = Depends(get_db), token:
 
 
 @app.get("/show_todos/", tags=["todo"], response_model=List[schemas.Show_Todo])
-def read_todos(db: Session = Depends(get_db), token: str = Header(None)):
+def read_todos(db: Session = Depends(get_db), offset: int = 0, limit: int = 100, token: str = Header(None)):
     check = crud.user_varification(db, token= token )
     if check:
-        return crud.get_all_todos(db, token= token )
+        return crud.get_all_todos(db, token= token, limit = limit, offset = offset )
     else:
         raise HTTPException(status_code=404, detail="Token not valid")          
 
@@ -98,6 +97,18 @@ def read_todo(todo_id: str, db: Session = Depends(get_db), token : str = Header(
 
 
 
+@app.get("/search_todo_by_key/{search_key}", tags=["todo"], response_model=List[schemas.Show_Todo])
+def search_todo_by_key(search_key: str, db: Session = Depends(get_db), token: str = Header(None)):
+    check = crud.user_varification(db, token= token )
+    if check:
+        db_todo = crud.get_todo_by_search_key(db, search_key=search_key)
+        if db_todo is None:
+            raise HTTPException(status_code=404, detail="Todo not found")
+        return db_todo
+    else:
+        raise HTTPException(status_code=404, detail="Token not valid") 
+
+
 @app.get("/show_users/", tags=["user"], response_model=List[schemas.Show_User])
 def read_users(db: Session = Depends(get_db)):
     users = crud.get_all_users(db)
@@ -126,7 +137,21 @@ def login(auth_details: schemas.AuthDetails, db: Session = Depends(get_db)):
     if (user_record is None) or (not auth_handler.verify_password(auth_details.password, user_record.password)):
         raise HTTPException(status_code=401, detail='Invalid username and/or password')
     token = auth_handler.encode_token(user_record.id)
-    return { 'token': token }
+    return { "user": user_record, 'token': token }
+
+
+
+
+# image upload
+
+
+
+
+
+
+
+
+
 
 
 

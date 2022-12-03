@@ -37,9 +37,9 @@ def get_todo_by_id(db: Session, id: str):
     return db.query(models.Todo).filter(models.Todo.id == id, models.Todo.is_active == True).first()
 
 
-def get_all_todos(db: Session, token : str):
+def get_all_todos(db: Session, token : str, offset : int, limit : int):
     user = get_user_by_token(db, token)
-    return db.query(models.Todo).filter(models.Todo.is_active == True, models.Todo.owner == user.id).all()
+    return db.query(models.Todo).filter(models.Todo.is_active == True, models.Todo.owner == user.id).offset(offset).limit(limit).all()
 
 
 def create_todo(db: Session, todo: schemas.Create_Todo, token= str):
@@ -67,6 +67,11 @@ def delete_todo(db: Session, todo_id: str):
     db_todo.is_active = False
     db_todo = db.commit()
     return True
+
+def get_todo_by_search_key(db: Session, search_key: str):
+    search = "%{}%".format(search_key)
+    return db.query(models.Todo).filter(models.Todo.desc.like(search)).all()
+
 
 def create_user(db: Session, user: schemas.Create_Usr ,password: str):
     

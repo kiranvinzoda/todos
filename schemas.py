@@ -53,7 +53,6 @@ class Show_User(BaseModel):
     id: str
     name : str
     email : str
-    password : str
     is_active : bool
 
     class Config:
