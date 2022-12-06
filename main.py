@@ -62,9 +62,11 @@ def create_todo(todo: schemas.Create_Todo , db: Session = Depends(get_db),token:
             file_name = crud.generate_id()
             file_location = f"files/{file_name}."
             with open(file_location + file_ext, 'wb') as f:
+                print(file_location)
                 f.write(plain_data)
             img_path = "files/"+file_name+"."+file_ext 
-        img_path = None    
+        else:
+            img_path = None    
         return crud.create_todo(db=db,todo_id = file_name, todo=todo, token= token, img_path = img_path)  
     else:
         raise HTTPException(status_code=404, detail="Token not valid")  
