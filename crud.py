@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-
+from typing import Union
 import models
 import schemas
 import uuid
@@ -42,23 +42,28 @@ def get_all_todos(db: Session, token : str, offset : int, limit : int):
     return db.query(models.Todo).filter(models.Todo.is_active == True, models.Todo.owner == user.id).offset(offset).limit(limit).all()
 
 
-def create_todo(db: Session, todo: schemas.Create_Todo, token= str):
+def create_todo(db: Session, todo_id : str, todo: schemas.Create_Todo, token= str, img_path= str):
     
-    todo_id = generate_id()
     user = get_user_by_token(db , token = token)
-    print(user.id)
-    db_todo = models.Todo(id = todo_id, title=todo.title, desc=todo.desc, owner=user.id)
+    db_todo = models.Todo(id = todo_id, title=todo.title, desc=todo.desc, owner=user.id, img = img_path)
     db.add(db_todo)
     db.commit()
     db.refresh(db_todo)
     return db_todo
 
-def update_todo(db: Session, todo_id: str, todo: schemas.Create_Todo):
-
-    db_todo = db.query(models.Todo).filter(models.Todo.id == todo_id, models.Todo.is_active == True).first()
-    db_todo.title = todo.title
-    db_todo.desc = todo.desc
-    db.commit()
+def update_todo(db: Session, todo_id: str, todo: schemas.Create_Todo, file_location : Union[str, None] = None):
+    if file_location != None :
+        db_todo = db.query(models.Todo).filter(models.Todo.id == todo_id, models.Todo.is_active == True).first()
+        db_todo.title = todo.title
+        db_todo.desc = todo.desc
+        db_todo.img = file_location
+        db.commit()
+    else:
+        db_todo = db.query(models.Todo).filter(models.Todo.id == todo_id, models.Todo.is_active == True).first()
+        db_todo.title = todo.title
+        db_todo.desc = todo.desc
+        db_todo.img = None
+        db.commit()
     return db_todo
 
 def delete_todo(db: Session, todo_id: str):

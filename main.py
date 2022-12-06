@@ -1,4 +1,4 @@
-from typing import List
+from typing import List,  Union
 from fastapi import Depends, FastAPI, HTTPException, Request, Response, Header
 from sqlalchemy.orm import Session
 from database import SessionLocal, engine
@@ -8,7 +8,8 @@ import schemas
 import models
 import crud
 from auth import AuthHandler
-
+from fastapi import FastAPI, File, UploadFile, Form
+import base64
 
 models.Base.metadata.create_all(bind=engine)
 app = FastAPI()
@@ -38,20 +39,50 @@ def get_db():
         db.close()
 
 
+# @app.post("/add_todo/", tags=["todo"], response_model=schemas.Show_Todo)
+# def create_todo(todo: schemas.Create_Todo = Depends(), file: UploadFile = File(...),db: Session = Depends(get_db), token: str = Header(None)):
+#     check = crud.user_varification(db, token= token )
+#     if check:
+#         file_location = f"files/{file.filename}"
+#         with open(file_location, "wb+") as file_object:
+#             file_object.write(file.file.read())
+#             return crud.create_todo(db=db, todo=todo, token= token)
+#     else:
+#         raise HTTPException(status_code=404, detail="Token not valid")  
+
+
 @app.post("/add_todo/", tags=["todo"], response_model=schemas.Show_Todo)
-def create_todo(todo: schemas.Create_Todo, db: Session = Depends(get_db), token: str = Header(None)):
+def create_todo(todo: schemas.Create_Todo , db: Session = Depends(get_db),token: str = Header(None)):
     check = crud.user_varification(db, token= token )
     if check:
-        return crud.create_todo(db=db, todo=todo, token= token)
+        if todo.img != "":
+            head, data = todo.img.split(',', 1)
+            file_ext = head.split(';')[0].split('/')[1]
+            plain_data = base64.b64decode(data)
+            file_name = crud.generate_id()
+            file_location = f"files/{file_name}."
+            with open(file_location + file_ext, 'wb') as f:
+                f.write(plain_data)
+            img_path = "files/"+file_name+"."+file_ext 
+        img_path = None    
+        return crud.create_todo(db=db,todo_id = file_name, todo=todo, token= token, img_path = img_path)  
     else:
-        raise HTTPException(status_code=404, detail="Token not valid")   
-
+        raise HTTPException(status_code=404, detail="Token not valid")  
 
 @app.get("/show_todos/", tags=["todo"], response_model=List[schemas.Show_Todo])
 def read_todos(db: Session = Depends(get_db), offset: int = 0, limit: int = 100, token: str = Header(None)):
     check = crud.user_varification(db, token= token )
     if check:
-        return crud.get_all_todos(db, token= token, limit = limit, offset = offset )
+        todo_list = crud.get_all_todos(db, token= token, limit = limit, offset = offset )
+        for todo in todo_list:
+            if todo.img != None:
+                with open(todo.img, "rb") as image2string:
+                    converted_string =  'data:image/jpg;base64,'+base64.b64encode(image2string.read()).decode()
+                todo.img = converted_string
+            else:
+                todo.img = None
+
+        return todo_list    
     else:
         raise HTTPException(status_code=404, detail="Token not valid")          
 
@@ -61,6 +92,12 @@ def read_todo(todo_id: str, db: Session = Depends(get_db), token: str = Header(N
     check = crud.user_varification(db, token= token )
     if check:
         db_todo = crud.get_todo(db, todo_id=todo_id, token= token)
+        if db_todo.img != None:
+            with open(db_todo.img, "rb") as image2string:
+                converted_string =  'data:image/jpg;base64,'+base64.b64encode(image2string.read()).decode()
+            db_todo.img = converted_string
+        else:
+            db_todo.img = None
         if db_todo is None:
             raise HTTPException(status_code=404, detail="Todo not found")
         return db_todo
@@ -74,9 +111,27 @@ def put_todo(todo_id: str, todo: schemas.Create_Todo, db: Session = Depends(get_
     check = crud.user_varification(db, token= token )
     if check:
         db_todo = crud.get_todo(db, todo_id=todo_id, token= token)
+
+        if todo.img != "":
+            head, data = todo.img.split(',', 1)
+            file_ext = head.split(';')[0].split('/')[1]
+            plain_data = base64.b64decode(data)
+            if db_todo.img == None:
+                file_location = "files/"+db_todo.id+"."+file_ext 
+                print(file_location)
+                img_url = file_location   
+            else:
+                file_location = db_todo.img
+                print(file_location)
+    
+            with open(file_location, 'wb') as f:
+                f.write(plain_data)  
+        else:
+            file_location = None  
+            print(file_location) 
+        update_tod = crud.update_todo(db, todo_id=todo_id, todo = todo, file_location = file_location)  
         if db_todo is None:
             raise HTTPException(status_code=404, detail="User not found")
-        update_tod = crud.update_todo(db, todo_id=todo_id, todo = todo)    
         return update_tod      
     else:
         raise HTTPException(status_code=404, detail="Token not valid") 
@@ -101,10 +156,16 @@ def read_todo(todo_id: str, db: Session = Depends(get_db), token : str = Header(
 def search_todo_by_key(search_key: str, db: Session = Depends(get_db), token: str = Header(None)):
     check = crud.user_varification(db, token= token )
     if check:
-        db_todo = crud.get_todo_by_search_key(db, search_key=search_key)
-        if db_todo is None:
+        todo_list = crud.get_todo_by_search_key(db, search_key=search_key)
+        for todo in todo_list:
+            with open(todo.img, "rb") as image2string:
+                converted_string =  'data:image/jpg;base64,'+base64.b64encode(image2string.read()).decode()
+            todo.img = converted_string
+        print(todo_list)    
+        return todo_list
+        if todo_list is None:
             raise HTTPException(status_code=404, detail="Todo not found")
-        return db_todo
+        
     else:
         raise HTTPException(status_code=404, detail="Token not valid") 
 
@@ -116,6 +177,8 @@ def read_users(db: Session = Depends(get_db)):
 
 
 #jwt tokan
+
+
 
 @app.post('/user_register', tags=["user"], status_code=201)
 def register(user: schemas.Create_Usr , db: Session = Depends(get_db)):
@@ -147,12 +210,38 @@ def login(auth_details: schemas.AuthDetails, db: Session = Depends(get_db)):
 
 
 
+# @app.post("/files/")
+# async def create_file(
+#     file: bytes = File(), fileb: UploadFile = File(), token: str = Form()
+# ):
+#     with open(file, 'rb') as binary_file:
+#     binary_file_data = binary_file.read()
+#     base64_encoded_data = base64.b64encode(binary_file_data)
+#     base64_message = base64_encoded_data.decode('utf-8')
+
+#     print(base64_message)
 
 
 
+# @app.post("/files/")
+# def create_file(user: schemas.Create_Todo , db: Session = Depends(get_db),token: str = Header(None)):
+
+#     head, data = user.img.split(',', 1)
+
+# # Get the file extension (gif, jpeg, png)
+#     file_ext = head.split(';')[0].split('/')[1]
+
+# # Decode the image data
+#     plain_data = base64.b64decode(data)
+#     file_name = crud.generate_id()
+#     file_location = f"files/{file_name}."
+# # Write the image to a file
+#     with open(file_location + file_ext, 'wb') as f:
+#         f.write(plain_data)
 
 
 
+    
 
 
 

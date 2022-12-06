@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List , Union
 
 class Show_User(BaseModel):
     id: str
@@ -21,6 +21,7 @@ class Show_Todo(BaseModel):
     title : str
     desc : str
     is_active : bool
+    img : Union[str, None] = None
     owner : str
 
     class Config:
@@ -32,6 +33,7 @@ class Create_Todo(BaseModel):
     
     title : str
     desc : str
+    img : Union[str, None] = None
 
 
     class Config:
@@ -62,3 +64,15 @@ class Show_User(BaseModel):
 class AuthDetails(BaseModel):
     email: str
     password: str
+
+
+
+
+
+
+
+
+
+
+
+
