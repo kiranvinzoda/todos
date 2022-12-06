@@ -205,9 +205,9 @@ def login(auth_details: schemas.AuthDetails, db: Session = Depends(get_db)):
 
 
 
-# image upload
 
 
+# image upload  code practice
 
 
 # @app.post("/files/")
