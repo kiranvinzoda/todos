@@ -1,4 +1,4 @@
-files/*.jpg
-files/*.png
-files/*.gif
-files/*.jpeg
+*.jpg
+*.png
+*.gif
+*.jpeg
