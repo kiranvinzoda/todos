@@ -4,7 +4,6 @@ from typing import List , Union
 class Show_User(BaseModel):
     id: str
     email : str
-    password : str
     is_active : bool
 
     class Config:

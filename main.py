@@ -24,7 +24,7 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -124,8 +124,7 @@ def put_todo(todo_id: str, todo: schemas.Create_Todo, db: Session = Depends(get_
                 img_url = file_location   
             else:
                 file_location = db_todo.img
-                print(file_location)
-    
+                
             with open(file_location, 'wb') as f:
                 f.write(plain_data)  
         else:
