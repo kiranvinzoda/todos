@@ -1,7 +1,7 @@
 from typing import List,  Union
 from fastapi import Depends, FastAPI, HTTPException, Request, Response, Header
 from sqlalchemy.orm import Session
-from database import SessionLocal, engine
+import database
 from models import User, Todo
 from fastapi.middleware.cors import CORSMiddleware
 import schemas
@@ -11,7 +11,7 @@ from auth import AuthHandler
 from fastapi import FastAPI, File, UploadFile, Form
 import base64
 
-models.Base.metadata.create_all(bind=engine)
+models.Base.metadata.create_all(bind=database.engine)
 app = FastAPI()
 auth_handler = AuthHandler()
 
@@ -32,7 +32,7 @@ app.add_middleware(
 
 
 def get_db():
-    db = SessionLocal()
+    db = database.SessionLocal()
     try:
         yield db
     finally:
@@ -240,7 +240,19 @@ def login(auth_details: schemas.AuthDetails, db: Session = Depends(get_db)):
 
 
 
-    
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
