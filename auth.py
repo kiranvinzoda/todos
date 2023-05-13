@@ -17,6 +17,8 @@ class AuthHandler():
         return self.pwd_context.verify(plain_password, hashed_password)
 
     def encode_token(self, user_id):
+        print(user_id)
+        print("im here")
         payload = {
             'exp': datetime.utcnow() + timedelta(days=0, minutes=60),
             'iat': datetime.utcnow(),
